@@ -2,40 +2,34 @@ var models = require('./models');
 var Tweet = models.Tweet;
 var User = models.User;
 
-var add = function () {};
+var TweetRender = function (tweet, user) {
+  this.name = user.name;
+  this.text = tweet.tweet;
+  this.id = tweet.id;
+  this.pictureUrl = user.pictureUrl;
+};
 
 
 var list = function () {
   return Tweet.findAll({include: [User] }).then(function(tweets){
-    var tweetList = tweets.reverse().map(function(tweet){
-      return {
-         name: tweet.User.name, 
-         text: tweet.tweet,
-         id: tweet.id,
-         pictureUrl: tweet.User.pictureUrl
-       };
+    return tweetList = tweets.reverse().map(function(tweet){
+      return new TweetRender(tweet, tweet.User);
     });
-    return tweetList;
   });
 };
 
 var findUser = function (username) {
-  return Tweet.findAll({
-    include: [{
-      model: User, 
-      where: {
-        name: username
-      }
-    }]
+  var userMemo;
+  return User.findOne({
+    where: {name: username}
+  })
+  .then(function (user) {
+    userMemo = user;
+    return user.getTweets();
   })
   .then(function (tweets) {
     return tweets.map(function (tweet) {
-      return {
-        name: tweet.User.name, 
-        id: tweet.id,
-        text: tweet.tweet, 
-        pictureUrl: tweet.User.pictureUrl
-      };
+      return new TweetRender(tweet, userMemo);
     });
   });
 };
@@ -46,17 +40,11 @@ var findTweet = function (tweetId) {
     include: [ User ]
   })
   .then(function (tweet) {
-    return {
-      name: tweet.User.name,
-      text: tweet.tweet,
-      id: tweet.id,
-      pictureUrl: tweet.User.pictureUrl
-    };
+    return new TweetRender(tweet, tweet.User);
   });
 };
 
-var postTweet = function (userName, tweetText){
-  var userMemo;
+var getOrMakeUser = function (userName) {
   return User.findOne({
     where: {name: userName}
   }).then(function (user){
@@ -64,25 +52,27 @@ var postTweet = function (userName, tweetText){
       return User.create( {name: userName, pictureUrl: 'http://lorempixel.com/48/48/'});
     }
     else return user;
-  })
-  .then(function (user){
-    userMemo = user;
-    return Tweet.create( {
-      tweet: tweetText, 
-      UserId: user.id
-    });
-  })
-  .then(function (tweet){
-    return {
-      name: userMemo.name, 
-      text: tweet.tweet,
-      id: tweet.id,
-      pictureUrl: userMemo.pictureUrl
-    };
   });
 };
 
+var makeTweet = function (user, tweetText) {
+  return Tweet.create( {
+    tweet: tweetText, 
+    UserId: user.id
+  });
+}
 
+var postTweet = function (userName, tweetText){
+  var userMemo;
+  return getOrMakeUser(userName)
+  .then(function (user){
+    userMemo = user;
+    return makeTweet(user, tweetText);
+  })
+  .then(function (tweet){
+    return new TweetRender(tweet, userMemo);
+  });
+};
 
 module.exports = {
   list: list,

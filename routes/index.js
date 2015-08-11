@@ -6,6 +6,7 @@ var User = models.User;
 
 module.exports = function (io) {
 	var router = require('express').Router();
+	var errLog = function (err) { console.log(err); };
 
 	router.get('/', function (req, res) {
 		tweetDB.list()
@@ -15,7 +16,8 @@ module.exports = function (io) {
 				title: 'Home',
 				tweets: tweetList
 			});
-		});
+		})
+		.catch(errLog);
 	});
 
 	router.get('/users/:name', function (req, res) {
@@ -27,16 +29,17 @@ module.exports = function (io) {
 				tweets: tweets,
 				theName: req.params.name
 			});
-		});
+		})
+		.catch(errLog);
 	});
 
 	router.get('/users/:name/tweets/:id', function (req, res) {
 		var id = parseInt(req.params.id);
 		tweetDB.findTweet(id)
 		.then(function (tweet) {
-			console.log(tweet);
 			res.render('index', {title: req.params.name, tweets: [tweet]})
-		});
+		})
+		.catch(errLog);
 	});
 
 	router.post('/submit', function (req, res) {
@@ -44,7 +47,8 @@ module.exports = function (io) {
 		.then (function(tweet){
 			io.sockets.emit('new_tweet', tweet);
 			res.redirect('/');
-		});
+		})
+		.catch(errLog);
 		// tweetBank.add(req.body.name, req.body.text);
 		// var theNewTweet = tweetBank.list().pop();
 		// io.sockets.emit('new_tweet', theNewTweet);
